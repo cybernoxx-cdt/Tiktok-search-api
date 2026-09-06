@@ -1,0 +1,8 @@
+{
+  "functions": {
+    "api/tiktok/search.js": {
+      "maxDuration": 60,
+      "memory": 1024
+    }
+  }
+}

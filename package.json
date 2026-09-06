@@ -1,0 +1,13 @@
+{
+  "name": "tiktok-search-api-vercel",
+  "version": "1.0.0",
+  "description": "Self-hosted TikTok keyword video search API for Vercel (scraper-based, no login required)",
+  "main": "api/index.js",
+  "scripts": {
+    "dev": "vercel dev"
+  },
+  "dependencies": {
+    "@sparticuz/chromium": "^123.0.1",
+    "puppeteer-core": "^22.13.1"
+  }
+}
