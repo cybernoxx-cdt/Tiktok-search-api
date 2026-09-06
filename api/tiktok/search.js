@@ -9,8 +9,22 @@
  * Response shape plugs directly into SHAVIYA-XMD's tt-search.js
  * (.tiktoksearch / .ts plugin) with zero code changes there:
  *   { "success": true, "data": [ { title, author, duration, link, nowm } ] }
+ *
+ * ── Vercel + Chromium fix ──────────────────────────────────────
+ * This file must set AWS_LAMBDA_JS_RUNTIME *before* requiring
+ * @sparticuz/chromium — the package reads that env var at import
+ * time, so setting it after require() is too late. It's set here
+ * as a code-level fallback, but for reliability also add it in the
+ * Vercel Dashboard: Settings → Environment Variables →
+ *   AWS_LAMBDA_JS_RUNTIME = nodejs20.x   (apply to all environments)
+ * ─────────────────────────────────────────────────────────────
  */
 
+if (!process.env.AWS_LAMBDA_JS_RUNTIME) {
+    process.env.AWS_LAMBDA_JS_RUNTIME = "nodejs20.x";
+}
+
+const path = require("path");
 const chromium = require("@sparticuz/chromium");
 const puppeteer = require("puppeteer-core");
 
@@ -22,10 +36,23 @@ let browserPromise = null;
 // for a short window — this avoids relaunching Chromium every request).
 async function getBrowser() {
     if (!browserPromise) {
+        // No GPU in serverless — disable graphics mode to avoid the browser
+        // freezing right after "new page" is created.
+        if (typeof chromium.setGraphicsMode === "function") {
+            chromium.setGraphicsMode(false);
+        }
+
+        const executablePath = await chromium.executablePath();
+
+        // CRITICAL: tell the dynamic linker where the extracted .so files
+        // (libnss3.so, libnspr4.so, etc.) live, or Chromium fails to start
+        // with "error while loading shared libraries".
+        process.env.LD_LIBRARY_PATH = path.dirname(executablePath);
+
         browserPromise = puppeteer.launch({
             args: chromium.args,
             defaultViewport: chromium.defaultViewport,
-            executablePath: await chromium.executablePath(),
+            executablePath,
             headless: chromium.headless,
         });
     }
